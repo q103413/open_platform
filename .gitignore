@@ -1,0 +1,10 @@
+/nbproject/
+.idea
+composer.lock
+*.log
+
+.travis.yml
+.bowerrc
+runtime/*
+application/config.php
+application/database.php
