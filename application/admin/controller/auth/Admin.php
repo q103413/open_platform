@@ -46,7 +46,7 @@ class Admin extends Backend
             if ($params)
             {
                 //记录所有上级uid，方便查询
-                $res = Db::name('auth_group_access')->where('uid', $this->uid)->field('all_add_uid')->find();
+                $res = Db::name('auth_group_access')->where('uid', $this->uid)->field('all_add_uid,pay_system_uid')->find();
               
                 $allAddUid = $res['all_add_uid'] . $this->uid . ',';
 
@@ -58,38 +58,45 @@ class Admin extends Backend
                 $pay_params['name'] = $params['nickname'];
                 $pay_params['pay_system_key'] = config('pay_system_key');
 
-                $pay_system = new Http();
-                // $agentLevel = array_slice(config('levels') ,3,3 );
-
                 if ( $level == config('levels')['oem'] ) {
                     $old_url = config('pay_system_url') . 'index.php/api/addOem';
                 }else if ( in_array( $level, config('level_agent') ) ) {
+                    if ( empty( $res['pay_system_uid']) ) {
+                        $this->code = -1;
+                        $this->msg = '支付系统的代理上级id不能为空';
+                        return;
+                    }
+                    $pay_params['agent_sj_id'] = $res['pay_system_uid'];
                     $old_url = config('pay_system_url') . 'index.php/api/addAgent';
                 }
+                
+                $pay_system = new Http();
                 $res = $pay_system->post($old_url, $pay_params);
-// var_dump($res);
                 $res  = json_decode($res,true);
-                if ( $res['status']==0 ) {
+                // var_dump($res);
+                if ( $res['status'] > 0 ) {
                     $pay_system_uid = $res['account_id'];
                 }else{
                      $this->code = -1;
                      $this->msg = $res['msg'];
                      return;
                 }
-
                 //开放平台写入
                 $params['salt'] = Random::alnum();
                 $params['password'] = md5(md5($params['password']) . $params['salt']);
+                //检查是否重复
+                $duplicate = $this->model->where(['username'=>$params['username'] ])->column('username');;
+                if ( !empty($duplicate) ) {
+                   $this->code = -1;
+                   $this->msg = '用户名重复';
+                   return;
+                }
+                //插入
                 $admin = $this->model->create($params);
+                //写日志
                 AdminLog::record(__('Add'), $this->model->getLastInsID());
 
-                //过滤不允许的组别,避免越权
-                // $group = array_intersect($this->childrenIds, $group);
-                // $dataset = [];
-                // foreach ($group as $value)
-                // {
                 $dataset = ['uid' => $admin->id, 'group_id' => $level, 'add_uid'=> $this->uid, 'all_add_uid'=>$allAddUid, 'pay_system_uid' => $pay_system_uid];
-                // }
                 model('AuthGroupAccess')->save($dataset);
                 $this->code = 1;
             }
