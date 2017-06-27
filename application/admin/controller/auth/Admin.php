@@ -47,8 +47,20 @@ class Admin extends Backend
             {
                 //记录所有上级uid，方便查询
                 $res = Db::name('auth_group_access')->where('uid', $this->uid)->field('all_add_uid,pay_system_uid')->find();
-              
                 $allAddUid = $res['all_add_uid'] . $this->uid . ',';
+
+                //获取老系统的oemid
+                $arr = array_filter( explode(',',$res['all_add_uid'] ) );
+                $map['uid']  = array('in', $arr);
+                $map['group_id'] = array('eq',3);
+                $oemwho = Db::name('auth_group_access')->where($map)->field('pay_system_uid')->find();
+                if (!$oemwho) {
+                   $this->code = -1;
+                    $this->msg = '获取老系统的oemid失败';
+                    return;
+                }
+                $oemId = $oemwho['pay_system_uid'];
+              // var_dump( $oemId );exit;
 
                 $level =  $this->level +1;
 
@@ -67,9 +79,11 @@ class Admin extends Backend
                         return;
                     }
                     $pay_params['agent_sj_id'] = $res['pay_system_uid'];
+                    $pay_params['oemwho'] = $oemId;
+                    // var_dump($pay_params);
                     $old_url = config('pay_system_url') . 'index.php/api/addAgent';
                 }
-                
+
                 $pay_system = new Http();
                 $res = $pay_system->post($old_url, $pay_params);
                 $res  = json_decode($res,true);
