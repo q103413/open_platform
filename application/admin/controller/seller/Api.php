@@ -8,13 +8,6 @@ use think\Controller;
 use think\Lang;
 use think\Session;
 
-use app\admin\model\AdminLog;
-use app\common\controller\Backend;
-use fast\Random;
-use fast\Tree;
-use \Think\Db ;
-use fast\Http;
-
 
 /**
  * 管理员管理
@@ -26,6 +19,9 @@ class Api extends Controller
 {
    public function index($value='')
    {
+    $this->ReturnAjax(['status'=>1,
+                       'msg'=> json_encode(['empty 2','33']),
+                       ]);
     var_dump('empty');
    }
 
