@@ -15,23 +15,30 @@
         </div>
     </div>
 </div>
+<div style="float: left;">
 <form action="/admin/appstore/applist/defaultApps" method="post"> 
 分配默认应用：<br />
   <?php foreach ($allapps as $key => $value) { ?>
+  <?php if($value['is_default'] == 0 ){ ?>
        <label><input name="appid[]" type="checkbox" value=" <?php echo $value['id'] ?>" /> <?php echo $value['id'] ?> </label> 
        <label> <?php echo $value['name'] ?> </label> 
-       <label> <?php echo $value['is_default'] == 1 ? '非默认' : '默认' ?> </label> <br /> 
+       <label> <?php echo $value['is_default'] == 0 ? '非默认应用' : '默认' ?> </label> <br /> 
+       <?php } ?>
    <?php } ?>
 <input type="submit" value="Submit" />
 </form> 
-
+</div>
+<div style="float: left;">
 <form action="/admin/appstore/applist/defaultApps" method="post"> 
 取消默认应用：<br />
   <?php foreach ($allapps as $key => $value) { ?>
+        <?php if($value['is_default'] == 1 ){ ?>
        <label><input name="appid[]" type="checkbox" value=" <?php echo $value['id'] ?>" /> <?php echo $value['id'] ?> </label> 
        <label> <?php echo $value['name'] ?> </label> 
-       <label> <?php echo $value['is_default'] == 1 ? '非默认' : '默认' ?> </label> <br /> 
+       <label> <?php echo $value['is_default'] == 1 ? '默认应用' : '非默认应用' ?> </label> <br /> 
+       <?php } ?>
    <?php } ?>
    <input type="hidden" name="cancel" value="cancel">
 <input type="submit" value="Submit" />
 </form> 
+</div>

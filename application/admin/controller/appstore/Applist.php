@@ -58,11 +58,11 @@ class Applist extends Backend
        if ($no_default) {
            $where = $where . ' and a.is_default = 1';
        }
-       $applist = Db::query('SELECT a.* FROM  '.config('database.prefix').'app_store a JOIN '.config('database.prefix').'app_admin_access b ON b.uid = '.$uid.' AND b.app_id = a.id '.$where);
+       $applist = Db::query('SELECT a.* FROM  '.config('database.prefix').'app_store a JOIN '.config('database.prefix').'app_admin_access b ON b.uid = '.$uid.' AND b.appid = a.id '.$where);
        //应用包括非默认应用和默认应用
        if (!$no_default) {
-          $applist2 =  Db::query('SELECT * FROM fa_app_store WHERE is_default = 2 and state = 1');
-          $applist = array_merge($applist,$applist2);
+          $applist =  Db::query('SELECT b.*,a.is_default FROM  fa_app_admin_access AS a JOIN fa_app_store AS b on  uid = '. $uid . ' AND a.appid = b.id AND b.state = 1' );
+          // $applist = array_merge($applist,$applist2);
        }
        return $applist;
     }
@@ -130,17 +130,17 @@ class Applist extends Backend
         if ($this->request->isPost())
         {
             $params = $this->request->post("row/a");
-
+// var_dump($params);
             //1正常，2关闭
             if ($params['appstatus'] != 2) {
                 $params['appstatus'] = 1;
             }
             //添加下级信息
-            $data = ['name' => $params['appname'], 'logo'=>$params['applogo'], 'url'=>$params['appurl'], 'state'=>$params['appstatus'], 'is_default'=>$params['apptype'] ];
+            $data = ['name' => $params['appname'], 'logo'=>$params['applogo'], 'url'=>$params['appurl'], 'state'=>$params['appstatus'] ];
             $appId = Db::name('app_store')->insertGetId($data);
             if ($appId)
             {
-                $data = ['uid' => $this->uid, 'app_id'=>$appId];
+                $data = ['uid' => $this->uid, 'appid'=>$appId,'is_default'=>$params['apptype'] ];
                 $appId = Db::name('app_admin_access')->insertGetId($data);
                 $this->code = 1;
             }else {
@@ -162,10 +162,12 @@ class Applist extends Backend
             $this->msg = __('you have no auth');
             return;
         }
+        $appId = (int)$ids;
         // if ($this->request->isPost())
         // {
             // $params = $this->request->post("row/a");
-            $res = db('app_store')->where('id',(int)$ids)->setField('state',2);
+            $res = db('app_store')->where('id', $appId)->setField('state',2);
+            $delapp = db('app_admin_access')->where('app_id', $appId)->delete();
             if ($res > 0) {
                   $this->code = 1;
                   $this->msg = __('succsess');

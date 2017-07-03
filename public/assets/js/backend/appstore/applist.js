@@ -26,7 +26,7 @@ define(['jquery', 'bootstrap', 'backend', 'table', 'form'], function ($, undefin
                         {field: 'is_default', title: __('app type')},
                         {field: 'logo', title: __('applogo')},
                         {field: 'url', title: __('appurl')},
-                        {field: 'state', title: __('Status')},
+                        // {field: 'state', title: __('Status')},
                         // {field: 'status', title: __("Status"), formatter: Table.api.formatter.status},
                         // {field: 'd', title: __('addapps'), formatter: Table.api.formatter.datetime},
                         {field: 'operate', title: __('Operate'), events: Table.api.events.operate, formatter: Table.api.formatter.operate}

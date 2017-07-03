@@ -32,7 +32,7 @@ class Manage extends Backend
         // $this->checkSellerLevel = array_slice(config('levels') ,2,4 );
         $this->model = model('Admin');
 
-        $this->addSellerLevel = array_slice(config('levels') ,3,3 );
+        $this->addSellerLevel = config('level_agent');
         //禁止商家查看下级
         if ( $this->level >= config('levels')['seller'] ) {
             // var_dump('no auth to manage sellers');
@@ -230,6 +230,57 @@ class Manage extends Backend
         }
 
         return;
+    }
+
+    /*
+    给商户分配应用
+     */
+    public function addApps($params=''){
+        //只有代理才能给商户分配应用
+        if ( !in_array( $this->level,  $this->addSellerLevel) ) {
+            // var_dump('no auth to manage sellers');
+            $this->code = -1;
+            $this->msg = 'no auth';
+            return;
+        }
+        //接收到的应用id数组
+        $appIds = $this->request->post("appid/a");
+        //接收到的下级管理员ID
+        $childId = $this->request->post("userid/a");
+        if (count($appIds) == 0 || count($childId) ==0 ) {
+           $this->code = -1;  
+            $this->msg = '不能为空';
+            return;
+        }
+        // if ($this->request->isPost())
+        // {
+            //添加下级信息
+            $data = [];
+            for ($i=0; $i < count($appIds); $i++) { 
+                $appId = (int)$appIds[$i];
+                for ($j=0; $j < count($childId); $j++) { 
+                    $res = Db::name('app_admin_access')->where(['uid' => (int)$childId[$j], 'app_id' => $appId ])->find();
+                    if ( !$res) {
+                       $data[] = ['uid' => (int)$childId[$j], 'app_id' => $appId ];
+                    }
+                }
+            }
+            if ($data == []) {
+               $this->code = -1;  
+               $this->msg = '没有新分配的应用';
+               return;
+            }
+            $res = Db::name('app_admin_access')->insertAll($data);
+            // var_dump(Db::getfa);
+            if (!$res || $res<1) {
+                $this->code = -1;
+                return;
+            }
+            $this->code = 1;  
+            $this->msg = '给商户分配应用成功';
+            return;
+        // }
+        // return $this->view->fetch();
     }
 
     /**
