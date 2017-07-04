@@ -25,9 +25,10 @@
        <label> <?php echo $value['is_default'] == 0 ? '非默认应用' : '默认' ?> </label> <br /> 
        <?php } ?>
    <?php } ?>
-<input type="submit" value="Submit" />
+<input type="submit" value="提交" />
 </form> 
 </div>
+<div style="float: left;width: 150px;height: 50px;"></div>
 <div style="float: left;">
 <form action="/admin/appstore/applist/defaultApps" method="post"> 
 取消默认应用：<br />
@@ -39,6 +40,6 @@
        <?php } ?>
    <?php } ?>
    <input type="hidden" name="cancel" value="cancel">
-<input type="submit" value="Submit" />
+<input type="submit" value="提交" />
 </form> 
 </div>
