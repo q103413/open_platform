@@ -35,11 +35,14 @@ class Applist extends Backend
      */
     public function index()
     {
-      
-        // var_dump($res);
+       
+        // $appids = Db::getLastSql();
+ 
+        // var_dump($defaultIds);exit;
         if ($this->request->isAjax() )
         {
-            $applist= $this->test();
+            //查看所有的应用包括上级的所有默认应用f
+            $applist= $this->test('all');
             $total = count($applist);
             $result = array("total" => $total, "rows" => $applist, "test"=>'test');
             return json($result);
@@ -56,16 +59,22 @@ class Applist extends Backend
           $uid = $this->uid;
        }
        $where = '';
-       //只查询非默认应用
-       if ($no_default) {
+       if ($no_default=='no_default') {
+            //只查询非默认应用
            $where = $where . ' and a.is_default = 0';
        }
-       // $applist = Db::query('SELECT a.* FROM  '.config('database.prefix').'app_store a JOIN '.config('database.prefix').'app_admin_access b ON b.uid = '.$uid.' AND b.appid = a.id '.$where);
        //应用包括非默认应用和默认应用
-       // if (!$no_default) {
-          $applist =  Db::query('SELECT b.*,a.is_default FROM  fa_app_admin_access AS a JOIN fa_app_store AS b on a.uid = '. $uid . ' AND a.appid = b.id AND b.state = 1' . $where );
-          // $applist = array_merge($applist,$applist2);
-       // }
+      $applist =  Db::query('SELECT b.*,a.is_default FROM  fa_app_admin_access AS a JOIN fa_app_store AS b on a.uid = '. $uid . ' AND a.appid = b.id AND b.state = 1' . $where );
+      if ($no_default == 'all') {
+         $defaultIds = Db::name('auth_group_access')->where('uid',$this->uid)->field('all_add_uid')->find();
+           $defaultIds = trim($defaultIds['all_add_uid'],',');
+           if (!$defaultIds) {
+               $defaultIds = 1;
+           }
+           $defaultIds =  Db::query('select b.*,a.is_default from fa_app_admin_access as a join fa_app_store as b on a.uid in ('.$defaultIds.') and a.is_default = 1 and a.appid = b.id' );
+           // $applist = $defaultIds;
+           $applist = array_merge($applist,$defaultIds);
+      }
        return $applist;
     }
     //更改是否默认APP
@@ -96,11 +105,7 @@ class Applist extends Backend
                $this->msg = __('设置默认应用有重复');
                return;
             }
-            // if ($cancel && ($res['']) && ( $res->add_user_level < $this->level) ) {
-            //    $this->code = -1;
-            //    $this->msg = __('不能取消上级设置的默认应用' );
-            //    return;
-            // }
+
             //更新默认状态
             Db::table( config('database.prefix').'app_admin_access' )
                 ->where(['appid'=>$value,'uid'=>$this->uid])
@@ -113,12 +118,6 @@ class Applist extends Backend
                     $child_uid = $res[$i]['uid'];
                     Db::table(config('database.prefix').'app_admin_access')->where(['uid'=>$child_uid,'appid'=>$value])->delete();
                 }
-                // Db::table( config('database.prefix').'auth_group_access' )->where( 'uid',$this->uid )->find();
-                // Db::table(config('database.prefix').'app_admin_access')->where('id',1)->delete();
-            // }
-            // $list['id'] = (int)$value;
-            // $list['is_default'] = $default; 
-            // $list['add_user_level'] = $this->level;
         }
 
         // $store = new app_store;
@@ -196,24 +195,7 @@ class Applist extends Backend
             return;
         // }
     }
-    /*
-    下级收回应用
-     */
-    public function closeApps($params='')
-    {
-        $appid = $this->request->post("appid/a");
-        $userid = $this->request->post("userid/a");
 
-var_dump($userid);return;
-        //  if ($this->request->isPost())
-        // {
-        $res = db('app_admin_access')->where('id',11)->delete();
-        if ($res > 0) {
-           $this->code = -1;
-        }
-        var_dump($res);
-        // }
-    }
     /*
     平台的下级管理分配应用
      */
@@ -256,6 +238,41 @@ var_dump($userid);return;
             return;
         // }
         // return $this->view->fetch();
+    }
+
+ /*
+    平台的下级管理分配应用
+     */
+    public function closeApps($params=''){
+        //接收到的应用id数组
+        $appIds = $this->request->post("appid/a");
+        //接收到的下级管理员ID
+        $childId = $this->request->post("userid/a");
+
+        if (count($appIds) == 0 || count($childId) ==0 ) {
+           $this->code = -1;  
+            $this->msg = '不能为空';
+            return;
+        }
+// var_dump($appIds,$childId);exit;
+        foreach ($childId as $cid) {
+          // 删除所有下级的该应用
+          $res = Db::table( config('database.prefix').'auth_group_access' )->where( 'all_add_uid','like','%,'.$cid.',%' )->field('uid')->select();
+          //遍历子节点的下级用户
+          foreach ($appIds as $v) {
+             for ($i=0; $i < count($res); $i++) { 
+                //所有的下级uid
+                $child_uid = $res[$i]['uid'];
+                Db::table(config('database.prefix').'app_admin_access')->where(['uid'=>$child_uid,'appid'=>$v ])->delete();
+             }
+             //删除直接该下级的应用
+             Db::table(config('database.prefix').'app_admin_access')->where(['uid'=>$cid,'appid'=>$v ])->delete();
+          }
+        }
+
+        $this->code = 1;  
+        $this->msg = '取消应用成功';
+        return;
     }
 
     /**

@@ -8,6 +8,7 @@
                     </div>
                     <table id="table" class="table table-striped table-bordered table-hover" width="100%">
                     </table>
+                    <div style="float: left;">
                    <form action="/admin/appstore/applist/addApps" method="post"> 
 管理员列表：<br /> 
                      <?php
@@ -20,9 +21,27 @@
                            <label><input name="appid[]" type="checkbox" value=" <?php echo $value['id'] ?>" /> <?php echo $value['id'] ?> </label> 
                            <label> <?php echo $value['name'] ?> </label> <br /> 
                        <?php } ?>
-<input type="submit" value="Submit" />
+<input type="submit" value="分配应用" />
                    </form> 
-                     
+</div>
+
+<div style="float: left;width: 150px;height: 50px;"></div>
+<div style="float: left;">
+<form action="/admin/appstore/applist/closeApps" method="post"> 
+管理员列表：<br /> 
+                     <?php
+                       foreach ($list as $key => $value) { ?>
+                           <label><input name="userid[]" type="checkbox" value=" <?php echo $value['id'] ?>" /> <?php echo $value['id'] ?> </label> 
+                           <label> <?php echo $value['username'] ?> </label> <br /> 
+                       <?php } ?>
+                   应用列表：<br />
+                      <?php foreach ($allapps as $key => $value) { ?>
+                           <label><input name="appid[]" type="checkbox" value=" <?php echo $value['id'] ?>" /> <?php echo $value['id'] ?> </label> 
+                           <label> <?php echo $value['name'] ?> </label> <br /> 
+                       <?php } ?>
+<input type="submit" value="取消应用" />
+                   </form> 
+         </div>            
                 </div>
             </div>
 
