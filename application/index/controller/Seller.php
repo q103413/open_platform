@@ -5,65 +5,80 @@ namespace app\index\controller;
 use \Think\Db ;
 use think\Session;
 use app\common\controller\Frontend;
+use app\admin\controller\appstore;
 
 class Seller extends Frontend
 {
 
     protected $layout = 'bootstrap';
 
+    private $appid = '';
+
+    private $appsecret = '';
+
+    private $state = '';
+
     public function _initialize()
     {
         parent::_initialize();
+        $this->uid = Session::get('uid');
+        $this->appid = config('appid');
+        $this->appsecret = config('appsecret');
+        $this->state = config('state');
     }
 
-    public function index($uid='')
+    public function index()
     {
-   //      include 'wechat.class.php';
-   //        $token=$this->_get("api"); //取得token
-   //        $arraywho=explode('xx',$token);  //获得是哪个商家
-   //        $who=$arraywho[1];
 
-   //        define('DEBUG', true);//是否开启调试模式
-
-   //       $options = array(
-   //            'token'=>$token  //填写你设定的key
-   //          );
-   //          $weObj = new Wechat($options);
-
-   //    $openid = $weObj->getRev()->getRevFrom();
-
-   //    exit('end');
-   //    //第一步获取oppenid并且存入cookie
-   // echo Session::get('openid','wechat');       
-   // $url_get_session = 'http://112.74.188.231/admin/seller/api/getSession';
-   // $url_set_session = 'http://112.74.188.231/admin/seller/api/setSession';
-   // // $post_data['openid'] = $openid;
-   // // $post_data['sj_id'] = $SceneId;
-   // $post_data['pay_system_key'] = '563fdsadhf23';
-   // $open_return = $this->post($url_set_session, $post_data);      
-   // $open_return = $this->post($url_get_session, $post_data);      
-   // var_dump($open_return);
-      // $this->scan();
-          // $row = $this->model->get(['id' => $ids]);
-          // $res = new \app\admin\controller\appstore\Applist();
-          // // var_dump($this->testapp()['rows']);
-          // $this->view->assign("res", $res->test());
-           // $params = $this->request->post("row/a");
-           if (!$uid) {
-              $uid = 1;   
-           }
-         // if ( $params['userid'] && is_int($params['userid']) ) {
-         //    $uid = $params['userid'];
-         // }else{
-         //    $uid = (int)json_decode( $_SESSION['think']['admin'])->id;
-         // }
-         $applist = Db::query('SELECT a.* FROM  '.config('database.prefix').'app_store a JOIN '.config('database.prefix').'app_admin_access b ON b.uid = '.(int)$uid.' AND b.appid = a.id and a.state = 1');
-         $this->view->assign("res", $applist);
-
-          // var_dump($applist);
-         return $this->view->fetch();
-
+      $redirect_uri = urlencode('http://open.gravpay.com/index/seller/shopCentre');
+      $url = 'https://open.weixin.qq.com/connect/oauth2/authorize?appid=' . $this->appid . '&redirect_uri=' . $redirect_uri . '&response_type=code&scope=snsapi_base&state='.$this->state.'#wechat_redirect';
+      header( "Location: $url" ); 
+      exit('end');
     }
+
+    public function shopCentre($username='')
+    {
+      $this->getCode();
+
+      if (!array_key_exists('state',$_GET) || $_GET['state'] != $this->state) {
+        exit('empty(1)');
+      }
+
+      $uid = Session::get('uid');
+ 
+       //应用包括非默认应用和默认应用
+      $applist =  Db::query('SELECT b.*,a.is_default FROM  fa_app_admin_access AS a JOIN fa_app_store AS b on a.uid = '. $uid . ' AND a.appid = b.id AND b.state = 1');
+      $defaultIds = Db::name('auth_group_access')->where('uid',$this->uid)->field('all_add_uid')->find();
+       $defaultIds = trim($defaultIds['all_add_uid'],',');
+       if (!$defaultIds) {
+           $defaultIds = 1;
+       }
+       $defaultIds =  Db::query('select b.*,a.is_default from fa_app_admin_access as a join fa_app_store as b on a.uid in ('.$defaultIds.') and a.is_default = 1 and a.appid = b.id' );
+
+      $applist = array_merge($applist,$defaultIds);
+
+      $this->view->assign("applist", $applist);
+
+      return $this->view->fetch('shopCentre');
+    }
+
+    public function getCode($value='')
+    {
+      if (!array_key_exists('state',$_GET) || $_GET['state'] != $this->state) {
+        exit('empty(1)');
+      }
+
+      $CODE = $_GET['code'];
+
+      $url = 'https://api.weixin.qq.com/sns/oauth2/access_token?appid='.$this->appid.'&secret=' . $this->appsecret . '&code='.$CODE.'&grant_type=authorization_code';
+      $weixin=file_get_contents($url);//通过code换取网页授权access_token
+      $jsondecode=json_decode($weixin); //对JSON格式的字符串进行编码
+      $array = get_object_vars($jsondecode);//转换成数组
+      $openid = $array['openid'];//输出openid
+      
+      $this->login( $openid );
+    }
+
     function post($url,$param,$post_file=FALSE){
         $oCurl = curl_init();
         if(stripos($url,"https://")!==FALSE){
@@ -92,68 +107,7 @@ class Seller extends Frontend
           return $this->postUrl($url,$strPOST);
         }
       }
-      function postUrl($url,$data)
-      { 
-        $opts = array(
-          'http' => array(
-                  'header' => "Content-Type: application/x-www-form-urlencoded\r\n".
-                              "Content-Length: ".strlen($data)."\r\n".
-                              "User-Agent:MyAgent/1.0\r\n",
-                  'method'  => "POST",
-                  'content' => $data,
-              ),
-          // 'http'=>array(    
-          //   'method' => 'POST',  
-          //   'content' => $data,
-          //   'timeout'=>60
-          // )
-        ); 
-        $context = stream_context_create($opts); 
-        $html =file_get_contents($url, false, $context); 
-        if(is_array($http_response_header))
-        {
-              foreach($http_response_header as $header)
-              { 
-                if (preg_match('/HTTP\/1\.[0-9].+?([0-9]+).?(.+)/', $header,$code))
-                { 
-                  if((int)$code[1]==200)
-                  {
-                    return $html;
-                  }
-                  break ;
-                }
-              }
-        }
-      return false;
-      }
-      public function scan(&$weObj){
-          $SceneId = $weObj->getRevSceneId();
-         # $weObj->text(I('get.api'))->reply();
-          #用户和代理商关联
-          $openid = $weObj->getRev()->getRevFrom();
-          #判断用户是否有代理
 
-          $agent_id = M('user')->where(['user'=>$openid])->getField('who');
-          if(!$agent_id){
-              $user_agent = M('user')->where(['user'=>$openid])->save(['who'=>$SceneId]);
-          }
-
-          $agent_name = M('admintb')->where(['id'=>$SceneId])->getField('mc');
-
-          #获取当前代理的OEMid
-          $oem_id = M('admintb')->where(['id'=>$SceneId])->getField('OEMwho');
-
-          $agent_config_domain = M('admin_confset')->where(['who'=>$oem_id])->getField('domain');
-       #  $weObj->text(M()->getLastSql())->reply();
-     
-      }
-
-    public function seller($uid='')
-    {
-     return $this->view->fetch();
-
-    }
-
-    
+  
 
 }

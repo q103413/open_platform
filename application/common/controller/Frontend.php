@@ -7,6 +7,8 @@ use app\common\model\Configvalue;
 use think\Config;
 use think\Controller;
 use think\Lang;
+use \Think\Db ;
+use think\Session;
 
 class Frontend extends Controller
 {
@@ -17,6 +19,7 @@ class Frontend extends Controller
      */
     protected $user = null;
 
+    protected $uid;
     /**
      * 布局模板
      * @var string
@@ -43,10 +46,10 @@ class Frontend extends Controller
         $this->view->assign("user", $this->user);
 
         // 如果有使用模板布局
-        if ($this->layout)
-        {
-            $this->view->engine->layout('layout/' . $this->layout);
-        }
+        // if ($this->layout)
+        // {
+        //     $this->view->engine->layout('layout/' . $this->layout);
+        // }
 
         // 语言检测
         $lang = Lang::detect();
@@ -63,8 +66,17 @@ class Frontend extends Controller
             'language'       => $lang
         ];
         Lang::load(APP_PATH . $modulename . '/lang/' . $lang . '/' . str_replace('.', '/', $controllername) . '.php');
-        $this->assign('site', Config::get("site"));
-        $this->assign('config', $config);
+        // $this->assign('site', Config::get("site"));
+        // $this->assign('config', $config);
+        
+    }
+
+    public function login($openid='')
+    {
+       $res = Db::name('admin')->where('username',$openid)->field('id')->find();
+       Session::set('uid',$res['id']);
+       // Session::set('openid',$openid);
+       return true;
     }
 
 }

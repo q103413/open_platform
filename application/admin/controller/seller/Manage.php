@@ -157,24 +157,6 @@ class Manage extends Backend
                    $this->msg = '修改成功';
                    return;
                 }
-               // var_dump( $row->getLastSql() );
-
-                // 先移除所有权限
-                // model('AuthGroupAccess')->where('uid', $row->id)->delete();
-
-                // $group = $this->request->post("group/a");
-
-                // // 过滤不允许的组别,避免越权
-                // $group = array_intersect($this->childrenIds, $group);
-
-                // $dataset = [];
-                // $uid = (int)json_decode( $_SESSION['think']['admin'])->id;
-                // foreach ($group as $value)
-                // {
-                //     $dataset[] = ['uid' => $row->id, 'group_id' => $value,'add_uid'=>$uid];
-                // }
-                // model('AuthGroupAccess')->saveAll($dataset);
-                // $this->code = 1;
             }
 
             return;
@@ -236,51 +218,42 @@ class Manage extends Backend
     给商户分配应用
      */
     public function addApps($params=''){
-        //只有代理才能给商户分配应用
-        if ( !in_array( $this->level,  $this->addSellerLevel) ) {
-            // var_dump('no auth to manage sellers');
-            $this->code = -1;
-            $this->msg = 'no auth';
-            return;
-        }
-        //接收到的应用id数组
-        $appIds = $this->request->post("appid/a");
-        //接收到的下级管理员ID
-        $childId = $this->request->post("userid/a");
-        if (count($appIds) == 0 || count($childId) ==0 ) {
-           $this->code = -1;  
-            $this->msg = '不能为空';
-            return;
-        }
-        // if ($this->request->isPost())
-        // {
-            //添加下级信息
-            $data = [];
-            for ($i=0; $i < count($appIds); $i++) { 
-                $appId = (int)$appIds[$i];
-                for ($j=0; $j < count($childId); $j++) { 
-                    $res = Db::name('app_admin_access')->where(['uid' => (int)$childId[$j], 'app_id' => $appId ])->find();
-                    if ( !$res) {
-                       $data[] = ['uid' => (int)$childId[$j], 'app_id' => $appId ];
-                    }
-                }
-            }
-            if ($data == []) {
-               $this->code = -1;  
-               $this->msg = '没有新分配的应用';
-               return;
-            }
-            $res = Db::name('app_admin_access')->insertAll($data);
-            // var_dump(Db::getfa);
-            if (!$res || $res<1) {
-                $this->code = -1;
-                return;
-            }
-            $this->code = 1;  
-            $this->msg = '给商户分配应用成功';
-            return;
-        // }
-        // return $this->view->fetch();
+      //接收到的应用id数组
+      $appIds = $this->request->post("appid/a");
+      //接收到的下级管理员ID
+      $childId = $this->request->post("userid/a");
+      if (count($appIds) == 0 || count($childId) ==0 ) {
+         $this->code = -1;  
+          $this->msg = '不能为空';
+          return;
+      }
+      // if ($this->request->isPost())
+      // {
+          //添加下级信息
+          $data = [];
+          for ($i=0; $i < count($appIds); $i++) { 
+              $appId = (int)$appIds[$i];
+              for ($j=0; $j < count($childId); $j++) { 
+                  $res = Db::name('app_admin_access')->where(['uid' => (int)$childId[$j], 'appid' => $appId ])->find();
+                  if ( !$res) {
+                     $data[] = ['uid' => (int)$childId[$j], 'appid' => $appId,'is_default'=>0 ];
+                  }
+              }
+          }
+          if ($data == []) {
+             $this->code = -1;  
+             $this->msg = '没有新分配的应用';
+             return;
+          }
+          $res = Db::name('app_admin_access')->insertAll($data);
+          // var_dump(Db::getfa);
+          if (!$res || $res<1) {
+              $this->code = -1;
+              return;
+          }
+          $this->code = 1;  
+          $this->msg = '分配应用成功';
+          return;
     }
 
     /**

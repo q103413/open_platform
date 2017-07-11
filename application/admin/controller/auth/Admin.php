@@ -50,25 +50,30 @@ class Admin extends Backend
                  //记录所有上级uid，方便查询
                 $res = Db::name('auth_group_access')->where('uid', $this->uid)->field('all_add_uid,pay_system_uid')->find();
                 $allAddUid = $res['all_add_uid'] . $this->uid . ',';
-
-                if ($this->level >= config('levels')['oem'] ) {
-                     //获取老系统的oemid
-                     $arr = array_filter( explode(',',$res['all_add_uid'] ) );
-                     //oem
-                     if ($this->level == config('levels')['oem'] ) {
-                        $arr[] = $this->uid;
-                     }
-                     $map['uid']  = array('in', $arr);
-                     $map['group_id'] = array('eq',3);
-                     $oemwho = Db::name('auth_group_access')->where($map)->field('pay_system_uid')->find();
-                     if (!$oemwho) {
-                        $this->code = -1;
-                         $this->msg = '获取老系统的oemid失败';
-                         return;
-                     }
-                     $oemId = $oemwho['pay_system_uid'];
-                     // var_dump(Db::getLastSql() );
-
+                // var_dump( $level , config('levels')['oem']);exit;
+                //同步oem和以下的用户到老系统
+                if ( $level >= config('levels')['oem'] ) {
+                    //oem
+                    if ($level == config('levels')['oem'] ) {
+                        $oemId = '';
+                    //agent
+                    }else if ($level > config('levels')['oem']) {
+                        //获取老系统的oemid
+                        $arr = array_filter( explode(',',$res['all_add_uid'] ) );
+                        if ($level-1 == config('levels')['oem'] ) {
+                           $arr[] = $this->uid;
+                        }
+                        $map['uid']  = array('in', $arr);
+                        $map['group_id'] = array('eq',3);
+                        $oemwho = Db::name('auth_group_access')->where($map)->field('pay_system_uid')->find();
+                        if (!$oemwho) {
+                           $this->code = -1;
+                            $this->msg = '获取老系统的oemid失败';
+                            return;
+                        }
+                        $oemId = $oemwho['pay_system_uid'];
+                    }
+                    
                    //老系统同步添加用户
                    $pay_params['username'] = $params['username'];
                    $pay_params['password'] = $params['password'];
@@ -92,12 +97,11 @@ class Admin extends Backend
                    $pay_system = new Http();
                    $res = $pay_system->post($old_url, $pay_params);
                    $res  = json_decode($res,true);
-                   // var_dump($res);
                    if ( $res['status'] > 0 ) {
                        $pay_system_uid = $res['account_id'];
                    }else{
                         $this->code = -1;
-                        $this->msg = $res['msg'];
+                        $this->msg = $res['error'];
                         return;
                    }
                 }
